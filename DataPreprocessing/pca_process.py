@@ -8,11 +8,12 @@ df['p1_score'] = df['p1_score'].astype(int)
 df['p2_score'] = df['p2_score'].astype(int)
 # 删除缺省值
 df.dropna(subset=['speed_mph'], inplace=True)
-
+df.to_excel('../data/deleted_data.xlsx', index=False)
 x_ls = []
 labels = []
 match_ids = []
-for i in range(8):
+x_length = 12
+for i in range(x_length):
     x_ls.append([])
 
 for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_no, df.point_no):
@@ -28,6 +29,10 @@ for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_n
     # x5 回击次数
     # x6 领先分数
     # x7 本game连续得分或失分局数
+    # x8 unforced error
+    # x9 上一个set的破局率
+    # x10 当前领先set
+    # x11 上一个game 上网次数与上网得分比例
     now_x_ls = []
     # x0
     now_x_ls.append(now_point['p1_games'].values[0] - now_point['p2_games'].values[0])
@@ -69,11 +74,28 @@ for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_n
         point_prev_no = prev_point.point_no.values[0] - 1
         prev_point = now_game[now_game.point_no == point_prev_no]
     now_x_ls.append(wins)
-    # # x8
-    # scores = 0
-    # prev_game = now_set[now_set.game_no == game_no - 1]
-    # if len(prev_game) != 0:
-
+    # x8
+    now_x_ls.append(1 if now_point['p1_unf_err'].values[0] == 1 else 0)
+    # x9
+    break_rate = 0
+    set_prev_no = now_set.set_no.values[0] - 1
+    prev_set = now_match[now_match.set_no == set_prev_no]
+    if len(prev_set) == 0:
+        break_rate = 0
+    else:
+        break_rate = prev_set['p1_break_pt_won'].sum() / prev_set['p1_break_pt'].sum() if prev_set['p1_break_pt'].sum() != 0 else 0
+    now_x_ls.append(break_rate)
+    # x10
+    now_x_ls.append(now_point['p1_sets'].values[0] - now_point['p2_sets'].values[0])
+    # x11
+    net_rate = 0
+    game_prev_no = now_game.game_no.values[0] - 1
+    prev_game = now_set[now_set.game_no == game_prev_no]
+    if len(prev_game) == 0:
+        net_rate = 0
+    else:
+        net_rate = prev_game['p1_net_pt_won'].sum()/ prev_game['p1_net_pt'].sum() if prev_game['p1_net_pt'].sum() != 0 else 0
+    now_x_ls.append(net_rate)
     # label
     labels.append(1 if now_point['point_victor'].values[0] == 1 else 0)
     # id
@@ -90,6 +112,8 @@ dataset = pd.DataFrame({
     'rally_count': x_ls[5],
     'AD_score': x_ls[6],
     'continue_wins': x_ls[7],
+    'unforced_error': x_ls[8],
+    'break_rate': x_ls[9],
     'label': labels,
     'match_id': match_ids,
 })
@@ -112,7 +136,7 @@ df.dropna(subset=['speed_mph'], inplace=True)
 x_ls = []
 labels = []
 match_ids = []
-for i in range(8):
+for i in range(x_length):
     x_ls.append([])
 
 for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_no, df.point_no):
@@ -121,7 +145,7 @@ for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_n
     now_game = now_set[now_set.game_no == game_no]
     now_point = now_game[now_game.point_no == point_no]
     last_point = now_game[now_game.point_no == point_no - 1]
-    # x0 当前set领先局
+    # x0 当前set领先game
     # x1 ace球
     # x2 是否发球
     # x3 球速
@@ -129,6 +153,7 @@ for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_n
     # x5 回击次数
     # x6 领先分数
     # x7 本game连续得分或失分局数
+    # x8 是否存在unforced error
     now_x_ls = []
     # x0
     now_x_ls.append(now_point['p2_games'].values[0] - now_point['p1_games'].values[0])
@@ -171,6 +196,28 @@ for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_n
         point_prev_no = prev_point.point_no.values[0] - 1
         prev_point = now_game[now_game.point_no == point_prev_no]
     now_x_ls.append(wins)
+    # x8
+    now_x_ls.append(1 if now_point['p2_unf_err'].values[0] == 1 else 0)
+    # x9
+    break_rate = 0
+    set_prev_no = now_set.set_no.values[0] - 1
+    prev_set = now_match[now_match.set_no == set_prev_no]
+    if len(prev_set) == 0:
+        break_rate = 0
+    else:
+        break_rate = prev_set['p2_break_pt_won'].sum() / prev_set['p2_break_pt'].sum() if prev_set['p2_break_pt'].sum() != 0 else 0
+    now_x_ls.append(break_rate)
+    # x10
+    now_x_ls.append(now_point['p2_sets'].values[0] - now_point['p1_sets'].values[0])
+    # x11
+    net_rate = 0
+    game_prev_no = now_game.game_no.values[0] - 1
+    prev_game = now_set[now_set.game_no == game_prev_no]
+    if len(prev_game) == 0:
+        net_rate = 0
+    else:
+        net_rate = prev_game['p2_net_pt_won'].sum() / prev_game['p2_net_pt'].sum() if prev_game['p2_net_pt'].sum() != 0 else 0
+    now_x_ls.append(net_rate)
     # label
     labels.append(1 if now_point['point_victor'].values[0] == 2 else 0)
     # id
@@ -187,6 +234,8 @@ dataset = pd.DataFrame({
     'rally_count': x_ls[5],
     'AD_score': x_ls[6],
     'continue_wins': x_ls[7],
+    'unforced_error': x_ls[8],
+    'break_rate': x_ls[9],
     'label': labels,
     'match_id': match_ids,
 })

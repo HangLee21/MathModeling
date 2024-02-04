@@ -157,16 +157,48 @@ df.dropna(subset=['speed_mph'], inplace=True)
 df = df[df.match_id == '2023-wimbledon-1701']
 df['point_victor'] = -df['point_victor'] + 2
 
-plt.figure(figsize=(48, 6))
+bg_color = 'lightblue'  # 背景颜色
+ranges = [[0, 45], [45, 126], [126, 195], [195, 259], [259, 334]]
+
+plt.figure(figsize=(48, 6), dpi=80, facecolor='w')
 plt.plot(df['point_no'], p_ls, label='P1 Performance Score')
 plt.plot(df['point_no'], p_ls2, label='P2 Performance Score')
-# plt.plot(df['point_no'], df['point_victor'], label='Really Score')
+plt.plot(df['point_no'], df['point_victor'], label='Really Score')
+for i in range(5):
+    if i == 1 or i == 2 or i == 4:
+        # 绘制特定范围的背景颜色
+        plt.axvspan(ranges[i][0], ranges[i][1], facecolor=bg_color, alpha=0.3)
 plt.xlabel('Point Number')
 plt.ylabel('Momentum Score')
 plt.title('Match Momentum Flow')
 plt.legend()
 plt.show()
-print(p_ls2)
+
+# p1 win game 2 3 5
+x_labels =[df['point_no'].iloc[:45], df['point_no'].iloc[45:126], df['point_no'].iloc[126:195], df['point_no'].iloc[195:259], df['point_no'].iloc[259:]]
+match_1 = [p_ls[:45], p_ls[45:126], p_ls[126:195], p_ls[195:259], p_ls[259:]]
+plt.figure(figsize=(48, 6), dpi=80)
+plt.xlabel('Points')
+plt.ylabel('Player1 Momentum')
+for i in range(len(match_1)):
+    plt.plot(x_labels[i], match_1[i])
+    if i == 1 or i == 2 or i == 4:
+        # 绘制特定范围的背景颜色
+        plt.axvspan(ranges[i][0], ranges[i][1], facecolor=bg_color, alpha=0.3)
+plt.show()
+
+match_2 = [p_ls2[:45], p_ls2[45:126], p_ls2[126:195], p_ls2[195:259], p_ls2[259:]]
+plt.figure(figsize=(48, 6), dpi=80)
+plt.xlabel('Points')
+plt.ylabel('Player2 Momentum')
+for i in range(len(match_1)):
+    plt.plot(x_labels[i], match_2[i])
+    if i == 0 or i == 3:
+        # 绘制特定范围的背景颜色
+        plt.axvspan(ranges[i][0], ranges[i][1], facecolor=bg_color, alpha=0.3)
+plt.show()
+
+
 accuracy = 0
 for i in range(len(p_ls)):
     if p_ls[i] > p_ls2[i] and df['point_victor'].values[i] == 1:
@@ -207,7 +239,6 @@ for index, row in data.iterrows():
             w += F[j]*row.values[j]
         p += w*weight_vector.real.tolist()[i]
     df.at[index, 'Momentum'] = p
-df.to_excel('../data/momentum_1.xlsx', index=False)
 
 df2 = pd.read_excel('../data/pca_standard_data_2.xlsx')
 columns2 = df2.columns[:-2]
@@ -221,5 +252,22 @@ for index, row in data2.iterrows():
             w += F[j]*row.values[j]
         p += w*weight_vector.real.tolist()[i]
     df2.at[index, 'Momentum'] = p
+df['momentum_diff'] = df['Momentum'] - df2['Momentum']
+df2['momentum_diff'] = df2['Momentum'] - df['Momentum']
+df['sign_reversal'] = 0
+# 迭代每个元素
+for i in range(len(df) - 5):
+    current_momentum = df.loc[i, 'momentum_diff']
+    next_momentum = df.loc[i + 1:i + 5, 'momentum_diff']
+
+    # 检查正负号变化
+    if (next_momentum > 0).all() or (next_momentum < 0).all():
+        df.loc[i, 'sign_reversal'] = 0
+    else:
+        df.loc[i, 'sign_reversal'] = 1
+
+df2['sign_reversal'] = df['sign_reversal']
+
+df.to_excel('../data/momentum_1.xlsx', index=False)
 df2.to_excel('../data/momentum_2.xlsx', index=False)
 

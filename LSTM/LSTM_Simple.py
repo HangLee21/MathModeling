@@ -16,7 +16,7 @@ Player = 1
 # 读取 Excel 文件
 dataset = pd.read_excel(f'../data/momentum_{Player}.xlsx')
 dataset = dataset[dataset['match_id'] != '2023-wimbledon-1701']
-columns = dataset.columns[:-3]
+columns = dataset.columns[:-5]
 
 # 假设你的特征数据保存在 X 中，标签数据保存在 y 中
 X_train, X_test, y_train, y_test = train_test_split(dataset[columns].values, dataset['Momentum'].values, test_size=0.2,
@@ -46,14 +46,9 @@ if Train:
     lr_scheduler = ReduceLROnPlateau(factor=0.1, patience=5, min_lr=0.001)
     # 编译模型时指定优化器和回调
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    early_stopper = EarlyStopping(
-        monitor='val_loss',
-        patience=10,
-        verbose=0,
-        mode='min')
     # 训练模型
     history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=1000, batch_size=32,
-                        callbacks=[lr_scheduler, early_stopper])
+                        callbacks=[lr_scheduler])
 
     # 绘制图像
     plt.figure(figsize=(12, 4))
