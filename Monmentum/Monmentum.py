@@ -51,9 +51,9 @@ row_data = df["momentum_score_diff"]
 df['point_victor'] = -df['point_victor'] + 2
 scaler = MinMaxScaler()
 normalized_row_data = scaler.fit_transform(row_data.values.reshape(-1, 1))
-plt.figure(figsize=(48, 6))
-plt.plot(df['point_no'], df['gradient'], label='Momentum Score')
-plt.plot(df['point_no'], df['point_victor'], label='Really Score')
+plt.figure(figsize=(18, 6))
+plt.plot(df['point_no'], df['momentum_score_1'], label='P1 Momentum Score')
+plt.plot(df['point_no'], df['momentum_score_2'], label='P2 Momentum Score')
 plt.xlabel('Point Number')
 plt.ylabel('Momentum Score')
 plt.title('Match Momentum Flow')

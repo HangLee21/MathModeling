@@ -69,7 +69,7 @@ for match_id, set_no, game_no, point_no in zip(df.match_id, df.set_no, df.game_n
     # x13
     now_x_ls.append(now_point['p1_distance_run'].values[0])
     # x14
-    now_x_ls.append(now_point['speed_mph'].values[0] if now_point['serve_no'].values[0] == 1 else 0)
+    now_x_ls.append(now_point['speed_mph'].values[0] if now_point['server'].values[0] == 1 else 0)
     # label
     labels.append(1 if now_point['point_victor'].values == 1 else 0)
     for i in range(len(now_x_ls)):

@@ -64,6 +64,41 @@ factor_loadings = fa.loadings_
 print("因子载荷矩阵：")
 print(factor_loadings)
 
+# 创建负载图
+plt.figure(figsize=(18, 6))
+plt.imshow(factor_loadings.T, cmap='coolwarm', aspect='auto')
+plt.colorbar()
+
+# 设置坐标轴标签和标题
+plt.xlabel('Features')
+plt.ylabel('Principal Components')
+plt.title('Loading Plot')
+n_features = 12
+features = [
+    'set_win',
+    'ace',
+    'server',
+    'speed',
+    'run',
+    'rally_count',
+    'AD_score',
+    'continue_wins',
+    'unforced_error',
+    'break_rate',
+    'net_rate',
+    'serve_rate'
+]
+# 设置x轴刻度标签
+plt.xticks(range(n_features), features)
+pcs = []
+for i in range(num_components):
+    pcs.append(f'PC {i}')
+# 设置y轴刻度标签
+plt.yticks(range(num_components), pcs)
+
+# 显示负载图
+plt.show()
+
 # 计算方差解释率
 variance_explained = fa.get_factor_variance()
 
@@ -73,40 +108,37 @@ print(variance_explained)
 
 # 计算判断矩阵
 factor_loadings = factor_loadings.T
-num_factors = len(factor_loadings)
-judgment_matrix = np.zeros((num_factors, num_factors))
 
-for i in range(num_factors):
-    for j in range(num_factors):
-        if i == j:
-            judgment_matrix[i, j] = 1
-        elif i < j:
-            judgment_matrix[i, j] = factor_loadings[i, :].sum() / factor_loadings[j, :].sum()
-        else:
-            judgment_matrix[i, j] = factor_loadings[i, :].sum() / factor_loadings[j, :].sum()
+# 创建4x4的初始判断矩阵
+judgment_matrix = np.array(
+                    [[1, 1/3, 1/5, 1/7],
+                   [3, 1, 1/3, 1/5],
+                   [5, 3, 1, 1/3],
+                   [7, 5, 3, 1]])
 
-print("判断矩阵:")
-print(judgment_matrix)
+# 计算特征向量和特征值
+eigenvalues, eigenvectors = np.linalg.eig(judgment_matrix)
 
-# 计算特征向量
-column_sum = np.sum(judgment_matrix, axis=0)
-normalized_matrix = judgment_matrix / column_sum
-feature_vector = np.mean(normalized_matrix, axis=1)
-# 计算一致性指标 CI
-n = len(judgment_matrix)
-lambda_max = np.sum(column_sum * feature_vector)
-CI = (lambda_max - n) / (n - 1)
+# 获取最大特征值
+max_eigenvalue = max(eigenvalues)
 
-# 计算一致性比率 RI
-RI_table = [0, 0, 0.58, 0.90, 1.12, 1.24, 1.32, 1.41, 1.45, 1.49]
-RI = RI_table[n - 1]
+# 计算一致性指标CI
+n = judgment_matrix.shape[0]
+ci = (max_eigenvalue - n) / (n - 1)
 
-# 计算一致性比率 CR
-CR = CI / RI
+# 预定义的随机一致性指标RI表
+ri_table = {1: 0, 2: 0, 3: 0.58, 4: 0.9, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45}
 
-print("CI:", CI)
-print("RI:", RI)
-print("CR:", CR)
+# 查找随机一致性指标RI
+ri = ri_table[n]
+
+# 计算一致性比率CR
+cr = ci / ri
+
+# 输出CI、RI和CR值
+print("CI值：", ci)
+print("RI值：", ri)
+print("CR值：", cr)
 
 # 计算特征向量
 eigenvalues, eigenvectors = np.linalg.eig(judgment_matrix)
@@ -118,6 +150,34 @@ weight_vector = principal_eigenvector / np.sum(principal_eigenvector)
 # 输出结果
 print("判断矩阵的权重向量:")
 print(weight_vector.real)
+# 计算判断矩阵的特征向量和权重
+
+weights = weight_vector
+# 构建决策矩阵
+decision_matrix = np.array([[0.8, 0.6, 0.7, 0.9],
+                            [0.7, 0.9, 0.6, 0.8],
+                            [0.9, 0.7, 0.8, 0.6]])
+
+# 标准化决策矩阵
+normalized_matrix = decision_matrix / np.sqrt(np.sum(decision_matrix**2, axis=0))
+
+# 确定正理想解和负理想解
+positive_ideal_solution = np.max(normalized_matrix, axis=0)
+negative_ideal_solution = np.min(normalized_matrix, axis=0)
+
+# 计算距离
+positive_distances = np.sqrt(np.sum((normalized_matrix - positive_ideal_solution)**2, axis=1))
+negative_distances = np.sqrt(np.sum((normalized_matrix - negative_ideal_solution)**2, axis=1))
+
+# 计算接近程度
+closeness = negative_distances / (positive_distances + negative_distances)
+
+# 输出结果
+print("权重：", weights)
+print("一致性比率：", cr)
+print("接近程度：", closeness)
+
+
 df = df[df.match_id == '2023-wimbledon-1701']
 data = df[columns]
 p_ls = []
@@ -158,12 +218,13 @@ df = df[df.match_id == '2023-wimbledon-1701']
 df['point_victor'] = -df['point_victor'] + 2
 
 bg_color = 'lightblue'  # 背景颜色
-ranges = [[0, 45], [45, 126], [126, 195], [195, 259], [259, 334]]
+ranges = [[0, 46], [46, 127], [127, 196], [196, 260], [259, 334]]
 
-plt.figure(figsize=(48, 6), dpi=80, facecolor='w')
+plt.figure(figsize=(24, 6), dpi=80, facecolor='w')
 plt.plot(df['point_no'], p_ls, label='P1 Performance Score')
 plt.plot(df['point_no'], p_ls2, label='P2 Performance Score')
-plt.plot(df['point_no'], df['point_victor'], label='Really Score')
+# plt.plot(df['point_no'], df['point_victor'], label='Really Score')
+# plt.plot(df['point_no'], df['server'], label='Server')
 for i in range(5):
     if i == 1 or i == 2 or i == 4:
         # 绘制特定范围的背景颜色
@@ -177,7 +238,7 @@ plt.show()
 # p1 win game 2 3 5
 x_labels =[df['point_no'].iloc[:45], df['point_no'].iloc[45:126], df['point_no'].iloc[126:195], df['point_no'].iloc[195:259], df['point_no'].iloc[259:]]
 match_1 = [p_ls[:45], p_ls[45:126], p_ls[126:195], p_ls[195:259], p_ls[259:]]
-plt.figure(figsize=(48, 6), dpi=80)
+plt.figure(figsize=(24, 6), dpi=80)
 plt.xlabel('Points')
 plt.ylabel('Player1 Momentum')
 for i in range(len(match_1)):
@@ -270,4 +331,78 @@ df2['sign_reversal'] = df['sign_reversal']
 
 df.to_excel('../data/momentum_1.xlsx', index=False)
 df2.to_excel('../data/momentum_2.xlsx', index=False)
+
+Woman = True
+if Woman:
+    ##### 存储女子势头分数
+    # 读取 Excel 文件
+    df = pd.read_excel('../data/woman_pca_standard_data_1.xlsx')
+    columns = df.columns[:-2]
+    data = df[columns]
+    for index, row in data.iterrows():
+        p = 0
+        for i in range(len(factor_loadings)):
+            F = factor_loadings[i]
+            w = 0
+            for j in range(len(F)):
+                w += F[j]*row.values[j]
+            p += w*weight_vector.real.tolist()[i]
+        df.at[index, 'Momentum'] = p
+
+    df2 = pd.read_excel('../data/woman_pca_standard_data_2.xlsx')
+    columns2 = df2.columns[:-2]
+    data2 = df2[columns2]
+    for index, row in data2.iterrows():
+        p = 0
+        for i in range(len(factor_loadings)):
+            F = factor_loadings[i]
+            w = 0
+            for j in range(len(F)):
+                w += F[j]*row.values[j]
+            p += w*weight_vector.real.tolist()[i]
+        df2.at[index, 'Momentum'] = p
+    df['momentum_diff'] = df['Momentum'] - df2['Momentum']
+    df2['momentum_diff'] = df2['Momentum'] - df['Momentum']
+    df['sign_reversal'] = 0
+    # 迭代每个元素
+    for i in range(len(df) - 5):
+        current_momentum = df.loc[i, 'momentum_diff']
+        next_momentum = df.loc[i + 1:i + 5, 'momentum_diff']
+
+        # 检查正负号变化
+        if (next_momentum > 0).all() or (next_momentum < 0).all():
+            df.loc[i, 'sign_reversal'] = 0
+        else:
+            df.loc[i, 'sign_reversal'] = 1
+
+    df2['sign_reversal'] = df['sign_reversal']
+
+    df.to_excel('../data/woman_momentum_1.xlsx', index=False)
+    df2.to_excel('../data/woman_momentum_2.xlsx', index=False)
+
+    index = df[df.match_id == '2023-wimbledon-2101'].reset_index(drop=True).index
+    df = df.iloc[index]
+
+    index = df2[df2.match_id == '2023-wimbledon-2101'].reset_index(drop=True).index
+    df2 = df2.iloc[index]
+
+    df3= pd.read_csv(r"../data/2023-wimbledon-female-matches.csv")
+    df3.loc[(df3.p1_score == 'AD', 'p1_score')] = 50
+    df3.loc[(df3.p2_score == 'AD', 'p2_score')] = 50
+    df3['p1_score'] = df3['p1_score'].astype(int)
+    df3['p2_score'] = df3['p2_score'].astype(int)
+    # 删除缺省值
+    df3.dropna(subset=['speed_mph'], inplace=True)
+    df3.drop(df3[(df3['point_no'] == '0X') | (df3['point_no'] == '0Y')].index, inplace=True)
+    df3['point_no'] = df3['point_no'].astype(int)
+    df3 = df3[df3.match_id == '2023-wimbledon-2101']
+
+    plt.figure(figsize=(24, 6), dpi=80, facecolor='w')
+    plt.plot(df3['point_no'], df['Momentum'], label='P1 Performance Score')
+    plt.plot(df3['point_no'], df2['Momentum'], label='P2 Performance Score')
+    plt.xlabel('Point Number')
+    plt.ylabel('Momentum Score')
+    plt.title('Match Momentum Flow')
+    plt.legend()
+    plt.show()
 
